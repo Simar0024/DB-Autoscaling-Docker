@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Cluster Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        background: "hsl(var(--background))",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --background: 210 20% 98%; --card: 0 0% 100%; --primary: 221 83% 53%; --border: 214 32% 91%; }
+        .dark { --background: 222 47% 11%; --card: 217 33% 17%; --primary: 217 91% 60%; --border: 217 20% 27%; }
+        body { background-color: hsl(var(--background)); transition: background-color 0.3s ease; }
+        .glass-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .live-dot { animation: pulse-soft 2s infinite; }
+        .traffic-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="text-slate-900 dark:text-slate-100 min-h-screen font-sans">
+    
+    <nav class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Cluster<span class="text-blue-600">Ops</span></h1>
+                    <p class="text-[10px] text-slate-500 uppercase font-semibold tracking-tighter">Distributed Architecture Manager</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <div class="hidden md:flex gap-4 border-r border-slate-200 dark:border-slate-700 pr-6">
+                    <div class="text-right">
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold">Cluster Load</span>
+                        <span id="traffic-status" class="text-slate-500 text-xs font-bold uppercase">Idle</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold">Latency</span>
+                        <span id="load-val" class="text-blue-500 text-xs font-bold">-- ms</span>
+                    </div>
+                </div>
+                <button onclick="document.documentElement.classList.toggle('dark')" class="p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-yellow-400">
+                    <i class="fas fa-moon dark:hidden"></i>
+                    <i class="fas fa-sun hidden dark:block"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 mt-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="text-sm font-bold mb-6 flex items-center gap-2 text-slate-500 uppercase tracking-wider">
+                        <i class="fas fa-edit"></i> Write Operations
+                    </h3>
+                    <form id="entryForm" class="space-y-4">
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-400 uppercase ml-1">Identity</label>
+                            <input type="text" id="name" placeholder="Full Name" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-400 uppercase ml-1">Network Address</label>
+                            <input type="email" id="email" placeholder="email@enterprise.com" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-400 uppercase ml-1">Payload Content</label>
+                            <textarea id="message" rows="3" placeholder="Enter transmission data..." required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mt-1 focus:ring-2 focus:ring-blue-500 outline-none transition-all"></textarea>
+                        </div>
+                        <button type="submit" id="submitBtn" class="w-full bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-broadcast-tower text-xs"></i> Push to Master
+                        </button>
+                    </form>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Transaction Log</h3>
+                        <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">Live</span>
+                    </div>
+                    <div id="writeLog" class="space-y-3 h-48 overflow-y-auto custom-scrollbar font-mono text-[10px]">
+                        <div class="text-slate-400 italic">Listening for cluster events...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 space-y-6">
+                <div id="table-container" class="glass-card rounded-2xl overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Replication Ledger</h3>
+                            <span id="cache-status" class="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 rounded text-[9px] font-bold text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 uppercase tracking-tighter">Connecting...</span>
+                        </div>
+                        <button onclick="fetchData()" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400">
+                            <i class="fas fa-sync-alt text-xs"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] text-slate-400 uppercase bg-slate-50/30 dark:bg-slate-900/30">
+                                    <th class="px-6 py-4 font-bold">Reference</th>
+                                    <th class="px-6 py-4 font-bold">Origin Node</th>
+                                    <th class="px-6 py-4 font-bold">User Identity</th>
+                                    <th class="px-6 py-4 font-bold">Payload</th>
+                                    <th class="px-6 py-4 font-bold text-right">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTable" class="divide-y divide-slate-100 dark:divide-slate-800">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const form = document.getElementById('entryForm');
+        const writeLog = document.getElementById('writeLog');
+        const tableBody = document.getElementById('dataTable');
+        const cacheStatus = document.getElementById('cache-status');
+        const latencyVal = document.getElementById('load-val');
+        const trafficStatus = document.getElementById('traffic-status');
+        const tableContainer = document.getElementById('table-container');
+
+        let lastDataId = 0;
+
+        function addLogEntry(type, message, isError = false) {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `p-2 rounded-lg border text-[10px] mb-2 animate-pulse ${
+                isError ? 'bg-red-50 border-red-100 text-red-600' : 'bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 text-blue-600'
+            }`;
+            entry.innerHTML = `<span class="font-mono text-slate-400">[${time}]</span> <strong>${type}:</strong> ${message}`;
+            writeLog.prepend(entry);
+            if (writeLog.children.length > 6) writeLog.lastElementChild.remove();
+        }
+
+        async function fetchData() {
+            const start = Date.now();
+            try {
+                const res = await fetch('/api/data');
+                if (!res.ok) throw new Error('Connectivity Loss');
+                
+                const result = await res.json();
+                const latency = Date.now() - start;
+                
+                latencyVal.innerText = `${latency}ms`;
+                cacheStatus.innerText = `Active Slave: ${result.served_by}`;
+                cacheStatus.className = "px-2.5 py-1 bg-emerald-500 text-white rounded text-[9px] font-bold uppercase live-dot";
+
+                if (!result.data || result.data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="p-12 text-center text-slate-400 text-xs italic">Waiting for cluster traffic...</td></tr>`;
+                    return;
+                }
+
+                
+                const latestId = result.data[0].id;
+                if (latestId > lastDataId && lastDataId !== 0) {
+                    
+                    trafficStatus.innerText = "🔥 High Traffic";
+                    trafficStatus.className = "text-orange-500 text-xs font-bold uppercase animate-bounce";
+                    tableContainer.classList.add('traffic-glow');
+                    addLogEntry("SYNC", `Detected ${latestId - lastDataId} new entries from swarm`);
+                } else if (latestId === lastDataId) {
+                    trafficStatus.innerText = "Optimal";
+                    trafficStatus.className = "text-emerald-500 text-xs font-bold uppercase";
+                    tableContainer.classList.remove('traffic-glow');
+                }
+                lastDataId = latestId;
+
+                tableBody.innerHTML = result.data.map(item => `
+                    <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-800/30 transition-all border-b border-slate-100 dark:border-slate-800">
+                        <td class="px-6 py-4 font-mono text-blue-500 text-xs">#${item.id}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded text-[9px] font-mono border border-slate-200 dark:border-slate-600">
+                                ${result.served_by}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-bold">${item.name}</div>
+                            <div class="text-[9px] text-slate-400">${item.email}</div>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-500 truncate max-w-[200px] italic">"${item.message}"</td>
+                        <td class="px-6 py-4 text-[10px] text-slate-400 text-right font-mono">${new Date(item.created_at).toLocaleTimeString()}</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                cacheStatus.innerText = "⚠️ Connection Offline";
+                cacheStatus.className = "px-2.5 py-1 bg-red-600 text-white rounded text-[9px] font-bold uppercase";
+                latencyVal.innerText = "---";
+                trafficStatus.innerText = "Offline";
+            }
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-circle-notch animate-spin"></i> Processing...';
+
+            const data = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                message: document.getElementById('message').value
+            };
+
+            try {
+                const res = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                addLogEntry("COMMIT", `Manual entry verified by ${result.db_node}`);
+                form.reset();
+                fetchData(); 
+            } catch (err) {
+                addLogEntry("ERROR", "Master Node Timeout", true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-broadcast-tower text-xs"></i> Push to Master';
+            }
+        };
+
+        setInterval(fetchData, 1500);
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
