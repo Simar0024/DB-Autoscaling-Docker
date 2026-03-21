@@ -7,15 +7,26 @@ done
 
 echo "🏗️ Ensuring Database Schema on Master..."
 docker exec db-master mysql -u root -ppassword -e "
+CREATE USER IF NOT EXISTS 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
+GRANT REPLICATION SLAVE ON *.* TO 'replicator'@'%';
+
+SET GLOBAL max_connections = 2000;
+SET GLOBAL innodb_flush_log_at_trx_commit = 2;
+SET GLOBAL sync_binlog = 0;
+SET GLOBAL innodb_buffer_pool_size = 536870912;
+
 CREATE DATABASE IF NOT EXISTS app_db;
 USE app_db;
+
 CREATE TABLE IF NOT EXISTS entries (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(100),
     message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);"
+);
+
+FLUSH PRIVILEGES;"
 
 echo "📝 Fetching Master Binary Log Coordinates..."
 MASTER_STATUS=$(docker exec db-master mysql -u root -ppassword -e "SHOW MASTER STATUS\G")
@@ -41,9 +52,13 @@ for SLAVE_NAME in $SLAVE_CONTAINERS; do
         docker exec "$SLAVE_NAME" mysql -u root -ppassword -e "
         STOP SLAVE;
         RESET SLAVE;
+        CREATE USER IF NOT EXISTS 'replicator'@'%'; 
+        ALTER USER 'replicator'@'%' IDENTIFIED BY 'password';
+        FLUSH PRIVILEGES;
+        GRANT ALL PRIVILEGES ON app_db.* TO 'replicator'@'%';
         CHANGE MASTER TO
             MASTER_HOST='db-master',
-            MASTER_USER='root',
+            MASTER_USER='replicator',
             MASTER_PASSWORD='password',
             MASTER_LOG_FILE='$CURRENT_LOG',
             MASTER_LOG_POS=$CURRENT_POS;

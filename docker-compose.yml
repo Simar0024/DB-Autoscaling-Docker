@@ -22,6 +22,12 @@ services:
     depends_on:
       db-master:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 10s
     networks:
       - app-network
 
@@ -35,8 +41,8 @@ services:
       MYSQL_DATABASE: app_db
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-ppassword"]
-      timeout: 10s
-      retries: 10
+      interval: 10s
+      retries: 5
     networks:
       - app-network
 
@@ -53,6 +59,10 @@ services:
     environment:
       MYSQL_DATABASE: app_db
       MYSQL_ROOT_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
+      interval: 10s
+      retries: 5
     networks:
       - app-network
 
