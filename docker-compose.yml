@@ -30,12 +30,14 @@ services:
     depends_on:
       db-master:
         condition: service_healthy
+      db-slave:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 10s 
-      timeout: 5s
+      interval: 5s 
+      timeout: 3s
       retries: 3
-      start_period: 20s
+      start_period: 10s
     networks:
       - app-network
 
@@ -67,10 +69,16 @@ services:
     environment:
       MYSQL_DATABASE: app_db
       MYSQL_ROOT_PASSWORD: password
+    command: 
+      - --innodb-flush-log-at-trx-commit=2
+      - --skip-log-bin
+      - --sync-binlog=0
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
-      interval: 10s
-      retries: 5
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -ppassword || exit 1"]
+      interval: 3s        
+      timeout: 2s         
+      retries: 10        
+      start_period: 5s
     networks:
       - app-network
 
