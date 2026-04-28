@@ -5,6 +5,7 @@
 DB_Autoscaling_Docker demonstrates a full-stack Docker-based autoscaling prototype with MySQL master/slave replication, backend API clustering, a reverse proxy front-end, monitoring tools, and load generation.
 
 Key components:
+
 - `nginx` for static UI + reverse proxy to backend cluster
 - `backend` (Node.js/Express) with read-from-slave and write-to-master split
 - `db-master` MySQL primary
@@ -43,11 +44,13 @@ Key components:
 ## ⚡ Quick Start (All-in-One)
 
 1. From repo root:
+
     ```bash
     docker compose up -d --build
     ```
 
 2. Start replication bootstrap (wait for DB master to be healthy):
+
     ```bash
     ./db_replica.sh
     ```
@@ -58,11 +61,13 @@ Key components:
    - Grafana: `http://localhost:3001` (user: `admin` / password: `admin`)
 
 4. Optional load test from this host:
+
     ```bash
     locust -f locustfile.py --host=http://localhost
     ```
 
 5. Optional autoscaling controller:
+
     ```bash
     chmod +x autoscale.sh
     ./autoscale.sh
@@ -73,6 +78,7 @@ Key components:
 ## 🔧 Component Configuration
 
 ### Docker Compose
+
 - `backend` depends on `db-master` being healthy and uses env vars:
   - `DB_MASTER=db-master`
   - `DB_SLAVE=db-slave`
@@ -80,12 +86,15 @@ Key components:
 - master pool is explicitly host `db-master` for writes
 
 ### MySQL Master (`mysql-master/master.cnf`)
+
 - includes `log-bin=mysql-bin`, `server-id=1`, `binlog-format=row`
 
 ### MySQL Slave (`mysql-slave/slave.cnf`)
+
 - includes `server-id=2`, `read_only=ON`, `relay_log` settings
 
 ### Analytics
+
 - `prometheus/prometheus.yml` scrapes `nginx-exporter:9113`
 
 ---
@@ -106,6 +115,7 @@ Key components:
 ## 📝 Frontend Behavior
 
 `frontend/index.html` is a static UI that:
+
 - submits write payloads to `/api/data`
 - polls `/api/data` every 1.2s
 - renders table and charts for cluster nodes, latency, and traffic state
@@ -123,7 +133,7 @@ Key components:
 - scales with `docker compose up -d --scale db-slave=... --scale backend=...`
 - configures new slaves asynchronously (`async_configure_slave`)
 
-> note: this script uses container names from compose v2 (`new-db-docker-db-master-1`) and assumes consistent naming
+> note: this script uses container names from compose v2 (`db-autoscaling-docker-db-master-1`) and assumes consistent naming
 
 ---
 
@@ -141,18 +151,25 @@ Key components:
 ## ✅ Validation
 
 1. Ensure all containers are running:
+
    ```bash
    docker compose ps
    ```
+
 2. Check backend logs for connected master/slave queries:
+
    ```bash
    docker logs -f backend
    ```
+
 3. Inspect replication status:
+
    ```bash
    docker exec db-slave mysql -uroot -ppassword -e "SHOW SLAVE STATUS\G"
    ```
+
 4. Hit API manually:
+
    ```bash
    curl http://localhost/api/data
    curl -X POST http://localhost/api/data -H 'Content-Type: application/json' -d '{"name":"x","email":"x@x.com","message":"hi"}'
@@ -174,16 +191,20 @@ Key components:
 ## 🧾 Development Notes
 
 - Backend is Node.js only (no auto npm script in compose): you can also run directly with:
+
   ```bash
   cd backend
   npm install
   node server.js
   ```
+
 - To add more slaves in one shot:
+
   ```bash
   docker compose up -d --scale db-slave=4 --scale backend=4
   ./db_replica.sh
   ```
+
 - For production, secure credentials and remove root tags from API.
 
 ---
@@ -202,6 +223,7 @@ Key components:
 ---
 
 ## 📌 Credits
+
 - Built for DB autoscaling demo with Docker Compose, MySQL replication, Prometheus, and Grafana.
 - Author: Simarjit Singh
 

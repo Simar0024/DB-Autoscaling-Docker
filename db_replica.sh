@@ -9,6 +9,7 @@ echo "🏗️ Ensuring Database Schema on Master..."
 docker exec db-master mysql -u root -ppassword -e "
 CREATE USER IF NOT EXISTS 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
 ALTER USER 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
+
 GRANT REPLICATION SLAVE ON *.* TO 'replicator'@'%';
 
 SET GLOBAL max_connections = 2000;
@@ -17,6 +18,7 @@ SET GLOBAL sync_binlog = 0;
 SET GLOBAL innodb_buffer_pool_size = 536870912;
 
 CREATE DATABASE IF NOT EXISTS app_db;
+GRANT ALL PRIVILEGES ON app_db.* TO 'replicator'@'%';
 USE app_db;
 
 CREATE TABLE IF NOT EXISTS entries (

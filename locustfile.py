@@ -5,7 +5,7 @@ class HeavyTrafficUser(HttpUser):
 
     @task(5)
     def read_entries(self):
-        self.client.get("/api/data/")
+        self.client.get("/api/data")
 
     @task(1)
     def write_entry(self):
@@ -14,4 +14,3 @@ class HeavyTrafficUser(HttpUser):
             "email": "bot@test.com",
             "message": "Testing Slave Read Status"
         })
-

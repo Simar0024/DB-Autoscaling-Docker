@@ -127,58 +127,71 @@
 
         // Global State
         let lastSeenId = 0;
-        let nodeUsageData = {}; // Format: { "node-id": requestCount }
+        let activeNodes = {}; // { nodeId: { reqCount: N, cpu: X, mem: Y, lastSeen: T } }
         let usageChart;
 
-        // Initialize Chart
         function initChart() {
             const ctx = document.getElementById('usageChart').getContext('2d');
             usageChart = new Chart(ctx, {
                 type: 'doughnut',
-                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }] },
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899', '#14b8a6'] }] },
                 options: { plugins: { legend: { display: false } }, cutout: '70%', responsive: true }
             });
         }
 
-        function updateChart(nodeId) {
-            nodeUsageData[nodeId] = (nodeUsageData[nodeId] || 0) + 1;
-            usageChart.data.labels = Object.keys(nodeUsageData);
-            usageChart.data.datasets[0].data = Object.values(nodeUsageData);
+        function updateState(nodeId, metrics) {
+            // Initialize or update node data
+            if (!activeNodes[nodeId]) {
+                activeNodes[nodeId] = { reqCount: 0, cpu: "0%", memory: "0%" };
+            }
+            activeNodes[nodeId].reqCount++;
+            activeNodes[nodeId].cpu = metrics.cpu || "0%";
+            activeNodes[nodeId].memory = metrics.memory || "0%";
+            activeNodes[nodeId].lastSeen = Date.now();
+
+            // Refresh Chart
+            const labels = Object.keys(activeNodes);
+            const data = labels.map(l => activeNodes[l].reqCount);
+            usageChart.data.labels = labels;
+            usageChart.data.datasets[0].data = data;
             usageChart.update();
-            renderNodeBadges(nodeId);
         }
 
-        function renderNodeBadges(currentNode, metrics = {}) {
-    nodeTopology.innerHTML = Object.keys(nodeUsageData).map(node => {
-        const isCurrent = node === currentNode;
-        const cpu = metrics.cpu || "0%";
-        const mem = metrics.memory || "0%";
+        function renderNodeBadges(currentNode) {
+            const now = Date.now();
+            nodeTopology.innerHTML = Object.keys(activeNodes)
+                .filter(node => now - activeNodes[node].lastSeen < 15000) // Hide inactive nodes
+                .sort()
+                .map(node => {
+                    const isCurrent = node === currentNode;
+                    const stats = activeNodes[node];
+                    const cpuNum = parseFloat(stats.cpu);
 
-        return `
-            <div class="px-4 py-3 rounded-xl border flex flex-col gap-1 transition-all animate-node 
-                ${isCurrent ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm' : 'border-slate-200 dark:border-slate-700'}">
-                <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full ${isCurrent ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'}"></div>
-                    <span class="text-xs font-mono font-black">${node}</span>
-                </div>
-                <div class="flex gap-3 mt-1">
-                    <div class="flex flex-col">
-                        <span class="text-[8px] text-slate-400 uppercase font-bold">CPU</span>
-                        <span class="text-[10px] font-bold ${parseFloat(cpu) > 70 ? 'text-red-500' : 'text-slate-600'}">${cpu}</span>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[8px] text-slate-400 uppercase font-bold">RAM</span>
-                        <span class="text-[10px] font-bold text-slate-600">${mem}</span>
-                    </div>
-                    <div class="flex flex-col border-l pl-2 border-slate-200">
-                        <span class="text-[8px] text-slate-400 uppercase font-bold">Reqs</span>
-                        <span class="text-[10px] font-bold text-blue-600">${nodeUsageData[node]}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+                    return `
+                        <div class="px-4 py-3 rounded-xl border flex flex-col gap-1 transition-all animate-node 
+                            ${isCurrent ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm' : 'border-slate-200 dark:border-slate-700'}">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full ${isCurrent ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'}"></div>
+                                <span class="text-xs font-mono font-black">${node}</span>
+                            </div>
+                            <div class="flex gap-3 mt-1">
+                                <div class="flex flex-col">
+                                    <span class="text-[8px] text-slate-400 uppercase font-bold">CPU</span>
+                                    <span class="text-[10px] font-bold ${cpuNum > 70 ? 'text-red-500' : 'text-slate-600'}">${stats.cpu}</span>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[8px] text-slate-400 uppercase font-bold">RAM</span>
+                                    <span class="text-[10px] font-bold text-slate-600">${stats.memory}</span>
+                                </div>
+                                <div class="flex flex-col border-l pl-2 border-slate-200">
+                                    <span class="text-[8px] text-slate-400 uppercase font-bold">Total</span>
+                                    <span class="text-[10px] font-bold text-blue-600">${stats.reqCount}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+        }
 
         function addLogEntry(type, msg, isErr = false) {
             const entry = document.createElement('div');
@@ -191,17 +204,18 @@
         async function fetchData() {
             const start = Date.now();
             try {
-                const res = await fetch(`/api/data?t=${Date.now()}`); // Cache busting
+                const res = await fetch(`/api/data?t=${Date.now()}`); 
                 if (!res.ok) throw new Error();
                 const result = await res.json();
                 
                 latencyVal.innerText = `${Date.now() - start}ms`;
                 cacheStatus.innerText = `Node: ${result.served_by}`;
                 
-                updateChart(result.served_by);
-		renderNodeBadges(result.served_by, result.metrics || {});
+                // Track metrics and update UI
+                updateState(result.served_by, result.metrics || {});
+                renderNodeBadges(result.served_by);
 
-                if (result.data.length > 0) {
+                if (result.data && result.data.length > 0) {
                     const topId = result.data[0].id;
                     if (topId > lastSeenId) {
                         if(lastSeenId !== 0) {
@@ -212,7 +226,7 @@
                         }
                         
                         tableBody.innerHTML = result.data.map(item => `
-                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors animate-node">
                                 <td class="px-6 py-4 font-mono text-blue-500">#${item.id}</td>
                                 <td class="px-6 py-4"><span class="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-[10px] font-mono">${result.served_by}</span></td>
                                 <td class="px-6 py-4"><b>${item.name}</b><br><span class="text-[10px] opacity-60">${item.email}</span></td>

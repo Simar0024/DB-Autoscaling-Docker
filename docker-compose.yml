@@ -13,21 +13,29 @@ services:
       - app-network
 
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    image: db-autoscaling-docker-backend
     deploy:
       replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
     environment:
       DB_MASTER: db-master
       DB_SLAVE: db-slave
+      HOST: 0.0.0.0 
     depends_on:
       db-master:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 5s
-      timeout: 2s
-      retries: 5
-      start_period: 10s
+      interval: 10s 
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - app-network
 
@@ -95,6 +103,7 @@ services:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATASOURCES_DEFAULT_URL=http://prometheus:9090
     networks:
       - app-network
 
