@@ -1,4 +1,34 @@
+const { NodeSDK } = require('@opentelemetry/sdk-node');
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
+const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http');
+const { MySQL2Instrumentation } = require('@opentelemetry/instrumentation-mysql2');
+
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter({
+    url: 'grpc://jaeger:4317', 
+  }),
+  instrumentations: [new HttpInstrumentation(), new MySQL2Instrumentation()],
+  serviceName: 'backend-service',
+});
+
+sdk.start();
+
 const express = require('express');
+const winston = require('winston');
+const LokiTransport = require('winston-loki');
+
+// LOGGING: Push logs to Loki instead of just console
+const logger = winston.createLogger({
+  transports: [
+    new LokiTransport({
+      host: 'http://loki:3100',
+      labels: { app: 'backend' },
+      json: true
+    }),
+    new winston.transports.Console()
+  ]
+});
+
 const mysql = require('mysql2/promise');
 const os = require('os');
 const client = require('prom-client');
@@ -35,6 +65,7 @@ const slavePool = mysql.createPool({ ...poolConfig, host: process.env.DB_SLAVE |
 
 // FIXED: Added metrics to the data response so the UI can update badges
 app.get('/api/data', async (req, res) => {
+    logger.info('Fetching data from slave pool');
     try {
         const [rows] = await slavePool.query(`
             SELECT id, name, email, message, created_at 
@@ -62,6 +93,7 @@ app.get('/api/data', async (req, res) => {
 });
 
 app.post('/api/data', async (req, res) => {
+    logger.info('Inserting data into master pool');
     try {
         const { name, email, message } = req.body;
         await masterPool.query(
